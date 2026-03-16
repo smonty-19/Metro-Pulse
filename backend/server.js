@@ -15,8 +15,8 @@ app.use(cors());
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/metropulse', {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log('❌ MongoDB Error:', err));
+}).then(() => console.log('MongoDB Connected'))
+  .catch(err => console.log('MongoDB Error:', err));
 
 // ===== MONGODB SCHEMAS =====
 
@@ -79,7 +79,7 @@ const seedStations = async () => {
   const stationCount = await Station.countDocuments();
   
   if (stationCount === 0) {
-    console.log('📥 Seeding 85 stations into MongoDB...');
+    console.log('Seeding 85 stations into MongoDB...');
     
     const allStations = [
       // PURPLE LINE (37 stations)
@@ -364,7 +364,7 @@ app.get('/api/journeys', verifyToken, async (req, res) => {
 // ===== START SERVER =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`\n✅ Server running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api`);
-  console.log(`🎯 Connect from React at: http://localhost:3000\n`);
+  console.log(`\nServer running on port ${PORT}`);
+  console.log(`API available at http://localhost:${PORT}/api`);
+  console.log(`Connect from React at: http://localhost:3000\n`);
 });

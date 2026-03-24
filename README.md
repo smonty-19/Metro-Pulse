@@ -1,70 +1,206 @@
-# Getting Started with Create React App
+# Metro Pulse
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Metro Pulse is a MERN stack web application that analyzes metro station traffic and delays to give commuters a clearer picture of congestion levels and travel conditions across the metro network.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Table of Contents
 
-### `npm start`
+- [About](#about)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [Running the App](#running-the-app)
+- [API Overview](#api-overview)
+- [Contributing](#contributing)
+- [License](#license)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## About
 
-### `npm test`
+Metro commutes are unpredictable — delays, overcrowded platforms, and no reliable way to plan ahead. Metro Pulse is built to fix that. It collects and visualizes traffic and delay data for metro stations, so commuters can check conditions before they leave and make smarter decisions about when and how to travel.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Screenshots
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**Home — Top 10 Busiest Stations**
+![Home Dashboard](screenshots/home.png)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**Journey Planner**
+![Journey Planner](screenshots/planner.png)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Station Status by Line**
+![Station Status](screenshots/station-status.png)
 
-### `npm run eject`
+**Favorite Routes**
+![Favorites](screenshots/favorites.png)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+**Statistics & Analytics**
+![Stats](screenshots/stats.png)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+**Register**
+![Register](screenshots/register.png)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Features
 
-## Learn More
+- Live traffic dashboard showing congestion levels across all stations
+- Journey planner with crowd levels, fare estimate, and departure time
+- Station status filtered by metro line (Purple, Green, Yellow)
+- Save and manage favorite routes per user account
+- Statistics page with hourly crowd charts and weekly delay trends
+- User authentication — register, login, and logout
+- Responsive design that works on both desktop and mobile
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Tech Stack
 
-### Code Splitting
+**Frontend**
+| Technology | Purpose |
+|---|---|
+| React.js | UI component framework |
+| CSS | Styling and layout |
+| HTML5 | Markup |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**Backend**
+| Technology | Purpose |
+|---|---|
+| Node.js | Runtime environment |
+| Express.js | REST API |
+| MongoDB | Database |
+| Mongoose | MongoDB object modeling |
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Project Structure
 
-### Making a Progressive Web App
+```
+Metro-Pulse/
+├── backend/
+│   ├── models/
+│   ├── routes/
+│   ├── controllers/
+│   └── server.js
+│
+├── frontend/
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       └── App.js
+│
+├── screenshots/
+├── .gitignore
+└── README.md
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+---
 
-### Advanced Configuration
+## Getting Started
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Prerequisites
 
-### Deployment
+- [Node.js](https://nodejs.org/) v16 or above
+- npm or yarn
+- [MongoDB](https://www.mongodb.com/) — local or via [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `npm run build` fails to minify
+### Installation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Clone the repository:
+
+```bash
+git clone https://github.com/smonty-19/Metro-Pulse.git
+cd Metro-Pulse
+```
+
+Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+Install frontend dependencies:
+
+```bash
+cd ../frontend
+npm install
+```
+
+---
+
+### Environment Variables
+
+Create a `.env` file inside the `backend/` folder:
+
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+```
+
+Make sure this file is never committed — it's already covered by `.gitignore`.
+
+---
+
+### Running the App
+
+Start the backend:
+
+```bash
+cd backend
+npm start
+```
+
+The API will be running at `http://localhost:5000`.
+
+In a separate terminal, start the frontend:
+
+```bash
+cd frontend
+npm start
+```
+
+The app will open at `http://localhost:3000`.
+
+---
+
+## API Overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/stations` | Get all metro stations |
+| `GET` | `/api/stations/:id` | Get details for a specific station |
+| `GET` | `/api/stations/:id/traffic` | Get traffic data for a station |
+| `GET` | `/api/delays` | Get current delay information |
+| `POST` | `/api/stations/:id/report` | Submit a congestion report |
+
+Base URL: `http://localhost:5000/api`
+
+---
+
+## Contributing
+
+Pull requests are welcome. If you want to work on something significant, open an issue first so we can discuss the approach.
+
+1. Fork the repo
+2. Create your branch — `git checkout -b feature/your-feature`
+3. Commit your changes — `git commit -m 'Add your feature'`
+4. Push — `git push origin feature/your-feature`
+5. Open a pull request
+
+---
+
+## License
+
+This project is open-source under the [MIT License](LICENSE).

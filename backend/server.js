@@ -1,4 +1,4 @@
-// ===== server.js - METROPULSE BACKEND =====
+//  server.js - METROPULSE BACKEND 
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -11,14 +11,14 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ===== MONGODB CONNECTION =====
+//  MONGODB CONNECTION 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/metropulse', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('MongoDB Connected'))
   .catch(err => console.log('MongoDB Error:', err));
 
-// ===== MONGODB SCHEMAS =====
+//  MONGODB SCHEMAS 
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -74,7 +74,7 @@ const Station = mongoose.model('Station', stationSchema);
 const Route = mongoose.model('Route', routeSchema);
 const Journey = mongoose.model('Journey', journeySchema);
 
-// ===== SEED STATIONS (Auto-populate database on first run) =====
+//  SEED STATIONS (Auto-populate database on first run) 
 const seedStations = async () => {
   const stationCount = await Station.countDocuments();
   
@@ -175,9 +175,9 @@ const seedStations = async () => {
     ];
 
     await Station.insertMany(allStations);
-    console.log('✅ 85 Stations seeded successfully!');
+    console.log('85 Stations seeded successfully!');
   } else {
-    console.log('✅ Stations already in database');
+    console.log('Stations already in database');
   }
 };
 
@@ -186,7 +186,7 @@ mongoose.connection.once('open', () => {
   seedStations();
 });
 
-// ===== AUTHENTICATION MIDDLEWARE =====
+//  AUTHENTICATION MIDDLEWARE 
 const verifyToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'No token provided' });
@@ -198,7 +198,7 @@ const verifyToken = (req, res, next) => {
   });
 };
 
-// ===== ROUTES =====
+//  ROUTES 
 
 // REGISTER
 app.post('/api/auth/register', async (req, res) => {
@@ -361,7 +361,7 @@ app.get('/api/journeys', verifyToken, async (req, res) => {
   }
 });
 
-// ===== START SERVER =====
+//  START SERVER 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\nServer running on port ${PORT}`);

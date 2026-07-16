@@ -1,6 +1,6 @@
 # Metro Pulse
 
-Metro Pulse is a MERN stack web application that analyzes metro station traffic and delays to give commuters a clearer picture of congestion levels and travel conditions across the metro network.
+Metro Pulse is a web application that analyzes metro station traffic and delays to give commuters a clearer picture of congestion levels and travel conditions across the metro network.
 
 ---
 

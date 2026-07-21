@@ -89,17 +89,12 @@
     return { status: "High", color: COLORS.danger };
   };
 
-  const calculateFare = (numStations) => {
-    if (numStations <= 2) return 10;
-    if (numStations <= 3) return 20;
-    if (numStations <= 4) return 30;
-    if (numStations <= 5) return 40;
-    if (numStations <= 6) return 50;
-    if (numStations <= 8) return 60;
-    if (numStations <= 10) return 70;
-    if (numStations <= 12) return 80;
-    if (numStations <= 15) return 90;
-    return 90;
+  // Fares and station counts come from the backend planner, which walks the
+  // actual network. Colour for each line, used when drawing journey legs.
+  const LINE_COLORS = {
+    purple: COLORS.purpleLine,
+    green: COLORS.greenLine,
+    yellow: COLORS.yellowLine
   };
 
   // ===== CALCULATE AVERAGE CROWD BY HOUR =====
@@ -229,6 +224,121 @@
     );
   };
 
+  // ===== SEARCHABLE STATION PICKER =====
+  // A plain <select> means scrolling 85 options, and it cannot distinguish the
+  // interchanges: Majestic and RV Road each exist on two lines and render as
+  // identical entries. This filters as you type and labels every option with
+  // its line.
+  const StationSearchSelect = ({ stations, value, onChange, placeholder }) => {
+    const [query, setQuery] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [highlight, setHighlight] = useState(0);
+    const containerRef = React.useRef(null);
+    const listboxId = React.useId();
+
+    const selected = stations.find(s => `${s.stationId}:${s.line}` === value);
+
+    const matches = stations.filter(station => {
+      const needle = query.trim().toLowerCase();
+      if (!needle) return true;
+      // Match the line name too, so "yellow" narrows to that line.
+      return station.name.toLowerCase().includes(needle)
+        || station.line.toLowerCase().includes(needle);
+    });
+
+    // Clicking outside should dismiss the list without selecting anything.
+    useEffect(() => {
+      if (!isOpen) return;
+      const onDocumentMouseDown = (event) => {
+        if (containerRef.current && !containerRef.current.contains(event.target)) {
+          setIsOpen(false);
+          setQuery('');
+        }
+      };
+      document.addEventListener('mousedown', onDocumentMouseDown);
+      return () => document.removeEventListener('mousedown', onDocumentMouseDown);
+    }, [isOpen]);
+
+    const commit = (station) => {
+      onChange(`${station.stationId}:${station.line}`);
+      setQuery('');
+      setIsOpen(false);
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!isOpen) { setIsOpen(true); return; }
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        setHighlight(prev => (prev + step + matches.length) % matches.length);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (isOpen && matches[highlight]) commit(matches[highlight]);
+      } else if (event.key === 'Escape') {
+        setIsOpen(false);
+        setQuery('');
+      }
+    };
+
+    const inputStyle = {
+      width: '100%', padding: '10px', backgroundColor: COLORS.darkBg,
+      border: `1px solid ${COLORS.border}`, color: COLORS.lightText,
+      borderRadius: '6px', boxSizing: 'border-box'
+    };
+
+    return (
+      <div ref={containerRef} style={{position: 'relative'}}>
+        <input
+          type="text"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          // Show the typed query while searching, the chosen station otherwise.
+          value={isOpen ? query : (selected ? selected.name : '')}
+          placeholder={selected ? selected.name : placeholder}
+          onChange={(e) => { setQuery(e.target.value); setHighlight(0); setIsOpen(true); }}
+          onFocus={() => { setIsOpen(true); setHighlight(0); }}
+          onKeyDown={onKeyDown}
+          style={inputStyle}
+        />
+        {isOpen && (
+          <div id={listboxId} role="listbox" style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 20,
+            maxHeight: '260px', overflowY: 'auto', backgroundColor: COLORS.darkBg,
+            border: `1px solid ${COLORS.border}`, borderRadius: '6px'
+          }}>
+            {matches.length === 0 ? (
+              <div style={{padding: '10px', color: COLORS.grayText, fontSize: '14px'}}>No station matches "{query}"</div>
+            ) : matches.map((station, idx) => (
+              <div
+                key={`${station.stationId}:${station.line}`}
+                role="option"
+                aria-selected={idx === highlight}
+                // mousedown fires before the input's blur, so the click is not
+                // swallowed by the list closing first.
+                onMouseDown={(e) => { e.preventDefault(); commit(station); }}
+                onMouseEnter={() => setHighlight(idx)}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  gap: '10px', padding: '9px 12px', cursor: 'pointer',
+                  backgroundColor: idx === highlight ? COLORS.primary : 'transparent'
+                }}
+              >
+                <span>{station.name}</span>
+                <span style={{
+                  fontSize: '11px', textTransform: 'capitalize', color: COLORS.darkBg,
+                  backgroundColor: LINE_COLORS[station.line] || COLORS.grayText,
+                  padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap', fontWeight: '600'
+                }}>{station.line}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ===== MAIN APP =====
   export default function App() {
     const [currentPage, setCurrentPage] = useState('Home');
@@ -253,6 +363,14 @@
     // Stats data
     const [avgCrowdByHour, setAvgCrowdByHour] = useState({});
     const [delaysPerDay, setDelaysPerDay] = useState({});
+
+    const [journeyLogged, setJourneyLogged] = useState(false);
+    const [loggingJourney, setLoggingJourney] = useState(false);
+
+    const [historyPeriod, setHistoryPeriod] = useState('month');
+    const [rideHistory, setRideHistory] = useState([]);
+    const [spendStats, setSpendStats] = useState(null);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     useEffect(() => {
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -309,6 +427,33 @@
       setAvgCrowdByHour(calculateAverageCrowdByHour());
       setDelaysPerDay(calculateDelaysPerDay());
     }, []);
+
+    // Ride history and spending, refetched whenever the period filter changes.
+    useEffect(() => {
+      if (!isLoggedIn || currentPage !== 'History') return;
+
+      let cancelled = false;
+      const fetchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+          const [journeys, stats] = await Promise.all([
+            apiCall(`/journeys?period=${historyPeriod}`),
+            apiCall(`/journeys/stats?period=${historyPeriod}`)
+          ]);
+          // A slower earlier request must not overwrite a newer period's result.
+          if (cancelled) return;
+          setRideHistory(journeys);
+          setSpendStats(stats);
+        } catch (error) {
+          if (!cancelled) console.log('Error loading history:', error);
+        } finally {
+          if (!cancelled) setHistoryLoading(false);
+        }
+      };
+
+      fetchHistory();
+      return () => { cancelled = true; };
+    }, [isLoggedIn, currentPage, historyPeriod]);
 
     const handleAuthSubmit = async (e) => {
       e.preventDefault();
@@ -387,34 +532,57 @@
       setLineStatus(' Metro is Operational');
       const fromCrowd = calculateCrowdLevel(fromStationData.name, fromStationData.type, departureDate);
       const toCrowd = calculateCrowdLevel(toStationData.name, toStationData.type, departureDate);
-      const fromIndex = allStations.findIndex(s => s.stationId === fromStationId);
-      const toIndex = allStations.findIndex(s => s.stationId === toStationId);
-      const numStations = Math.abs(toIndex - fromIndex) + 1;
-      const fare = calculateFare(numStations);
+
+      // The backend walks the real network, so this handles interchanges and
+      // cross-line trips that station-index arithmetic cannot.
+      let plan;
+      try {
+        plan = await apiCall(`/routes/plan?from=${fromStationId}&to=${toStationId}`);
+      } catch (error) {
+        setLineStatus(`Could not plan this journey: ${error.message}`);
+        setJourneyDetails(null);
+        return;
+      }
+
       const details = {
-        from: fromStationData.name,
-        to: toStationData.name,
+        ...plan,
         fromCrowd,
         toCrowd,
         avgCrowd: Math.round((fromCrowd + toCrowd) / 2),
-        fare,
-        departureTime: departureDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        numStations
+        departureAt: departureDate,
+        departureTime: departureDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
       };
       setJourneyDetails(details);
-      if (isLoggedIn) {
-        try {
-          await apiCall('/journeys', 'POST', {
-            fromStation: fromStationData.name,
-            toStation: toStationData.name,
-            departureTime: departureDate,
-            crowdLevel: details.avgCrowd,
-            fare: details.fare,
-            duration: 25
-          });
-        } catch (error) {
-          console.log('Error recording journey:', error);
-        }
+      // Checking a route is not the same as taking it. Recording happens only
+      // when the user presses Log Journey, so history and spending reflect
+      // trips actually made.
+      setJourneyLogged(false);
+    };
+
+    const handleLogJourney = async () => {
+      if (!isLoggedIn) {
+        alert('Please login to log journeys');
+        return;
+      }
+      if (!journeyDetails) return;
+
+      setLoggingJourney(true);
+      try {
+        await apiCall('/journeys', 'POST', {
+          fromStation: journeyDetails.from,
+          toStation: journeyDetails.to,
+          departureTime: journeyDetails.departureAt,
+          crowdLevel: journeyDetails.avgCrowd,
+          fare: journeyDetails.fare,
+          duration: journeyDetails.totalTimeMin,
+          stationCount: journeyDetails.stationCount,
+          interchanges: journeyDetails.interchanges.map(i => i.station)
+        });
+        setJourneyLogged(true);
+      } catch (error) {
+        alert('Could not log journey: ' + error.message);
+      } finally {
+        setLoggingJourney(false);
       }
     };
 
@@ -428,17 +596,14 @@
         const [toStationId] = toStation.split(':');
         const fromStationData = allStations.find(s => s.stationId === fromStationId);
         const toStationData = allStations.find(s => s.stationId === toStationId);
-        const fromIndex = allStations.findIndex(s => s.stationId === fromStationId);
-        const toIndex = allStations.findIndex(s => s.stationId === toStationId);
-        const numStations = Math.abs(toIndex - fromIndex) + 1;
-        const fare = calculateFare(numStations);
+        const plan = await apiCall(`/routes/plan?from=${fromStationId}&to=${toStationId}`);
         const response = await apiCall('/favorites', 'POST', {
-          fromStation: fromStationData.name,
-          toStation: toStationData.name,
+          fromStation: plan.from,
+          toStation: plan.to,
           fromLine: fromStationData.line,
           toLine: toStationData.line,
-          distance: numStations,
-          fare: fare,
+          distance: plan.stationCount,
+          fare: plan.fare,
           label
         });
         setFavorites([...favorites, response.route]);
@@ -542,7 +707,7 @@
         )}
 
         <div style={{display: 'flex', gap: '8px', padding: '16px 24px', borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.darkBg, overflowX: 'auto'}}>
-          {['Home', 'Planner', 'Station Status', 'Favorites', 'Stats', 'Map'].map(tab => (
+          {['Home', 'Planner', 'Station Status', 'Favorites', 'History', 'Stats', 'Map'].map(tab => (
             <button key={tab} onClick={() => setCurrentPage(tab)} style={{
               padding: '10px 16px',
               backgroundColor: currentPage === tab ? COLORS.primary : 'transparent',
@@ -593,21 +758,21 @@
                 <h2 style={{marginBottom: '20px'}}>Plan Your Journey</h2>
                 <div style={{marginBottom: '16px'}}>
                   <label style={{display: 'block', marginBottom: '8px', color: COLORS.grayText, fontSize: '13px', fontWeight: '600'}}>From Station</label>
-                  <select value={fromStation} onChange={(e) => setFromStation(e.target.value)} style={{width: '100%', padding: '10px', backgroundColor: COLORS.darkBg, border: `1px solid ${COLORS.border}`, color: COLORS.lightText, borderRadius: '6px', boxSizing: 'border-box'}}>
-                    <option value="">Select from station</option>
-                    {allStations.map(station => (
-                      <option key={station.stationId} value={`${station.stationId}:${station.line}`}>{station.name}</option>
-                    ))}
-                  </select>
+                  <StationSearchSelect
+                    stations={allStations}
+                    value={fromStation}
+                    onChange={setFromStation}
+                    placeholder="Type to search stations"
+                  />
                 </div>
                 <div style={{marginBottom: '16px'}}>
                   <label style={{display: 'block', marginBottom: '8px', color: COLORS.grayText, fontSize: '13px', fontWeight: '600'}}>To Station</label>
-                  <select value={toStation} onChange={(e) => setToStation(e.target.value)} style={{width: '100%', padding: '10px', backgroundColor: COLORS.darkBg, border: `1px solid ${COLORS.border}`, color: COLORS.lightText, borderRadius: '6px', boxSizing: 'border-box'}}>
-                    <option value="">Select to station</option>
-                    {allStations.map(station => (
-                      <option key={station.stationId} value={`${station.stationId}:${station.line}`}>{station.name}</option>
-                    ))}
-                  </select>
+                  <StationSearchSelect
+                    stations={allStations}
+                    value={toStation}
+                    onChange={setToStation}
+                    placeholder="Type to search stations"
+                  />
                 </div>
                 <div style={{marginBottom: '16px'}}>
                   <label style={{display: 'block', marginBottom: '8px', color: COLORS.grayText, fontSize: '13px', fontWeight: '600'}}>Departure Time</label>
@@ -617,9 +782,27 @@
                   Check Journey
                 </button>
                 {journeyDetails && (
-                  <button onClick={() => handleSaveFavorite(`${journeyDetails.from} to ${journeyDetails.to}`)} style={{width: '100%', padding: '12px', backgroundColor: COLORS.accent, color: COLORS.lightText, border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer'}}>
-                    Save as Favorite
-                  </button>
+                  <div>
+                    <button
+                      onClick={handleLogJourney}
+                      disabled={loggingJourney || journeyLogged}
+                      style={{
+                        width: '100%', padding: '12px', marginBottom: '12px',
+                        backgroundColor: journeyLogged ? COLORS.darkGreen : COLORS.success,
+                        color: journeyLogged ? COLORS.success : COLORS.lightText,
+                        border: 'none', borderRadius: '6px', fontWeight: '600',
+                        cursor: (loggingJourney || journeyLogged) ? 'default' : 'pointer'
+                      }}
+                    >
+                      {journeyLogged ? 'Journey logged' : loggingJourney ? 'Logging...' : 'Log Journey'}
+                    </button>
+                    <div style={{color: COLORS.mutedGray, fontSize: '12px', marginBottom: '12px'}}>
+                      Checking a route does not record it. Log it only if you actually travelled.
+                    </div>
+                    <button onClick={() => handleSaveFavorite(`${journeyDetails.from} to ${journeyDetails.to}`)} style={{width: '100%', padding: '12px', backgroundColor: COLORS.accent, color: COLORS.lightText, border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer'}}>
+                      Save as Favorite
+                    </button>
+                  </div>
                 )}
               </div>
               <div style={{backgroundColor: COLORS.darkBgAlt, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '20px'}}>
@@ -634,12 +817,45 @@
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>From:</span> {journeyDetails.from}</div>
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>To:</span> {journeyDetails.to}</div>
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>Time:</span> {journeyDetails.departureTime}</div>
-                    <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>Stations:</span> {journeyDetails.numStations}</div>
+                    <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>Stations:</span> {journeyDetails.stationCount}</div>
+                    <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>Journey time:</span> {journeyDetails.totalTimeMin} min</div>
+                    <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}>
+                      <span style={{color: COLORS.mutedGray}}>Changes:</span>{' '}
+                      {journeyDetails.interchanges.length === 0
+                        ? 'Direct, no change needed'
+                        : journeyDetails.interchanges.map(i => i.station).join(', ')}
+                    </div>
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>From Crowd:</span> <span style={{color: getCrowdStatus(journeyDetails.fromCrowd).color}}>{getCrowdStatus(journeyDetails.fromCrowd).status} ({journeyDetails.fromCrowd}%)</span></div>
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>To Crowd:</span> <span style={{color: getCrowdStatus(journeyDetails.toCrowd).color}}>{getCrowdStatus(journeyDetails.toCrowd).status} ({journeyDetails.toCrowd}%)</span></div>
                     <div style={{marginBottom: '12px', paddingBottom: '12px', borderBottom: `1px solid ${COLORS.border}`}}><span style={{color: COLORS.mutedGray}}>Average Crowd:</span> <span style={{color: getCrowdStatus(journeyDetails.avgCrowd).color}}>{getCrowdStatus(journeyDetails.avgCrowd).status} ({journeyDetails.avgCrowd}%)</span></div>
                     <div style={{marginTop: '20px', paddingTop: '20px', borderTop: `1px solid ${COLORS.border}`}}>
-                      <div style={{color: COLORS.accent, fontSize: '14px', fontWeight: '600', marginBottom: '8px'}}>💰 Fare</div>
+                      <div style={{color: COLORS.accent, fontSize: '14px', fontWeight: '600', marginBottom: '12px'}}>Route</div>
+                      {journeyDetails.legs.map((leg, idx) => (
+                        <div key={idx}>
+                          <div style={{display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '10px'}}>
+                            <div style={{width: '4px', alignSelf: 'stretch', minHeight: '38px', backgroundColor: LINE_COLORS[leg.line], borderRadius: '2px', flexShrink: 0}} />
+                            <div>
+                              <div style={{fontWeight: '600', textTransform: 'capitalize'}}>{leg.line} Line</div>
+                              <div style={{color: COLORS.grayText, fontSize: '14px'}}>
+                                {leg.boardAt} to {leg.arriveAt}
+                              </div>
+                              <div style={{color: COLORS.mutedGray, fontSize: '13px'}}>
+                                {leg.stationCount} {leg.stationCount === 1 ? 'stop' : 'stops'}, {leg.timeMin} min
+                              </div>
+                            </div>
+                          </div>
+                          {journeyDetails.interchanges[idx] && (
+                            <div style={{margin: '0 0 10px 14px', padding: '8px 12px', backgroundColor: COLORS.darkBg, borderLeft: `3px solid ${COLORS.warning}`, borderRadius: '4px', fontSize: '13px'}}>
+                              Change at <strong>{journeyDetails.interchanges[idx].station}</strong> to the{' '}
+                              <span style={{textTransform: 'capitalize'}}>{journeyDetails.interchanges[idx].toLine}</span> Line
+                              <span style={{color: COLORS.mutedGray}}> (about {journeyDetails.interchanges[idx].walkMinutes} min)</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{marginTop: '20px', paddingTop: '20px', borderTop: `1px solid ${COLORS.border}`}}>
+                      <div style={{color: COLORS.accent, fontSize: '14px', fontWeight: '600', marginBottom: '8px'}}>Fare</div>
                       <div style={{fontSize: '24px', fontWeight: 'bold', color: COLORS.accent}}>₹{journeyDetails.fare}</div>
                     </div>
                   </div>
@@ -677,6 +893,109 @@
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {currentPage === 'History' && (
+            <div>
+              <div style={{backgroundColor: COLORS.darkBgAlt, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '20px', marginBottom: '20px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px'}}>
+                  <h2>Ride History and Spending</h2>
+                  <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                    {[
+                      { value: 'week', label: 'Last week' },
+                      { value: 'month', label: 'Last month' },
+                      { value: '6months', label: 'Last 6 months' },
+                      { value: 'year', label: 'Last year' },
+                      { value: 'all', label: 'All time' }
+                    ].map(option => (
+                      <button key={option.value} onClick={() => setHistoryPeriod(option.value)} style={{
+                        padding: '8px 14px',
+                        backgroundColor: historyPeriod === option.value ? COLORS.primary : 'transparent',
+                        border: `1px solid ${COLORS.border}`,
+                        color: COLORS.lightText,
+                        cursor: 'pointer',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        whiteSpace: 'nowrap'
+                      }}>{option.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {!isLoggedIn ? (
+                  <div style={{color: COLORS.grayText, textAlign: 'center', padding: '40px'}}>Please login to view your ride history</div>
+                ) : historyLoading ? (
+                  <div style={{color: COLORS.grayText, textAlign: 'center', padding: '40px'}}>Loading...</div>
+                ) : !spendStats || spendStats.totalTrips === 0 ? (
+                  <div style={{color: COLORS.grayText, textAlign: 'center', padding: '40px'}}>No trips recorded in this period</div>
+                ) : (
+                  <div>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '24px'}}>
+                      {[
+                        { label: 'Trips', value: spendStats.totalTrips },
+                        { label: 'Total spent', value: `₹${spendStats.totalSpent}` },
+                        { label: 'Average fare', value: `₹${spendStats.averageFare}` },
+                        { label: 'Stations travelled', value: spendStats.totalStations }
+                      ].map(stat => (
+                        <div key={stat.label} style={{backgroundColor: COLORS.darkBg, border: `1px solid ${COLORS.border}`, borderRadius: '6px', padding: '16px'}}>
+                          <div style={{color: COLORS.mutedGray, fontSize: '13px', marginBottom: '6px'}}>{stat.label}</div>
+                          <div style={{fontSize: '24px', fontWeight: 'bold', color: COLORS.accent}}>{stat.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {spendStats.monthlySpend.length > 0 && (
+                      <div style={{marginBottom: '24px'}}>
+                        <h3 style={{marginBottom: '12px', fontSize: '16px'}}>Spend by month</h3>
+                        <SimpleBarChart
+                          data={Object.fromEntries(spendStats.monthlySpend.map(m => [m.month, m.spent]))}
+                          maxValue={Math.max(...spendStats.monthlySpend.map(m => m.spent))}
+                        />
+                      </div>
+                    )}
+
+                    {spendStats.topRoutes.length > 0 && (
+                      <div>
+                        <h3 style={{marginBottom: '12px', fontSize: '16px'}}>Most travelled routes</h3>
+                        {spendStats.topRoutes.map(route => (
+                          <div key={route.route} style={{display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${COLORS.border}`, gap: '12px'}}>
+                            <span>{route.route}</span>
+                            <span style={{color: COLORS.mutedGray, whiteSpace: 'nowrap'}}>{route.trips}x, ₹{route.spent}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {isLoggedIn && rideHistory.length > 0 && (
+                <div style={{backgroundColor: COLORS.darkBgAlt, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '20px', overflowX: 'auto'}}>
+                  <h2 style={{marginBottom: '20px'}}>All Trips</h2>
+                  <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                    <thead>
+                      <tr style={{borderBottom: `1px solid ${COLORS.border}`}}>
+                        {['Date', 'From', 'To', 'Stations', 'Changes', 'Fare'].map(heading => (
+                          <th key={heading} style={{textAlign: 'left', padding: '12px', color: COLORS.mutedGray, whiteSpace: 'nowrap'}}>{heading}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rideHistory.map(trip => (
+                        <tr key={trip._id} style={{borderBottom: `1px solid ${COLORS.border}`}}>
+                          <td style={{padding: '12px', whiteSpace: 'nowrap'}}>{new Date(trip.timestamp).toLocaleDateString('en-IN')}</td>
+                          <td style={{padding: '12px'}}>{trip.fromStation}</td>
+                          <td style={{padding: '12px'}}>{trip.toStation}</td>
+                          <td style={{padding: '12px'}}>{trip.stationCount ?? '--'}</td>
+                          <td style={{padding: '12px'}}>{trip.interchanges?.length ? trip.interchanges.join(', ') : 'Direct'}</td>
+                          <td style={{padding: '12px', color: COLORS.accent, fontWeight: '600'}}>₹{trip.fare ?? 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

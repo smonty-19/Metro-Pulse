@@ -1,0 +1,22 @@
+# Render blueprint for the MetroPulse API.
+# Import via Render > New > Blueprint, then set the secret values in the
+# dashboard (they are deliberately not stored in this file).
+services:
+  - type: web
+    name: metropulse-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # sync: false means "prompt me in the dashboard, do not read from git".
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false

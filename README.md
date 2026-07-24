@@ -1,6 +1,15 @@
 # Metro Pulse
 
-Metro Pulse is a web application that analyzes metro station traffic and delays to give commuters a clearer picture of congestion levels and travel conditions across the metro network.
+Metro Pulse is a full-stack web app for the Bangalore (Namma) Metro. Plan a
+journey across the Purple, Green, and Yellow lines with real interchange
+guidance and fares, check live station crowding, and track your ride history
+and spending over time.
+
+**Live demo → [metro-pulse-nine.vercel.app](https://metro-pulse-nine.vercel.app)**
+
+> The demo runs on free hosting that sleeps when idle, so the first load after a
+> quiet period can take 30–50 seconds while the backend wakes up. It is quick
+> after that.
 
 ---
 
@@ -25,20 +34,29 @@ Metro Pulse is a web application that analyzes metro station traffic and delays 
 
 ## About
 
-Metro commutes are unpredictable — delays, overcrowded platforms, and no reliable way to plan ahead. Metro Pulse is built to fix that. It collects and visualizes traffic and delay data for metro stations, so commuters can check conditions before they leave and make smarter decisions about when and how to travel.
+Metro Pulse answers the questions every commute raises - which line to take,
+where to change, what it will cost, and how crowded it will be. The journey
+planner walks the real network and tells you exactly where to switch lines, the
+fare for the trip, and how busy the stations are at your chosen time. Once you
+are travelling, log each trip to build up a ride history and a spending
+breakdown by week, month, or year.
 
 ---
 
 ## Screenshots
 
-**Home — Top 10 Busiest Stations**
+**Home - Top 10 Busiest Stations**
 ![Home Dashboard](screenshots/home.png)
 
 **Journey Planner**
-![Journey Planner](screenshots/planner.png)
+![Journey Planner](screenshots/planner_1.png)
 
-> Predates the searchable station picker and the leg-by-leg route breakdown —
-> to be refreshed.
+![Route Breakdown for user convenience](screenshots/planner_2.png)
+
+**User History/Budget Analyser**
+![Ride History and Spending](screenshots/history_1.png)
+
+![All Trip Log](screenshots/history_2.png)
 
 **Station Status by Line**
 ![Station Status](screenshots/station-status.png)
@@ -52,27 +70,23 @@ Metro commutes are unpredictable — delays, overcrowded platforms, and no relia
 **Register**
 ![Register](screenshots/register.png)
 
-<!-- TODO: add screenshots/history.png once deployed -->
-
-**Ride History and Spending** — _screenshot to be added._
-
 ---
 
 ## Features
 
 - Live traffic dashboard showing congestion levels across all stations
-- Journey planner that walks the real network — shows which line to board,
+- Journey planner that walks the real network - shows which line to board,
   where to change, and how many stops each leg takes
 - Searchable station picker: type to filter all 85 stations, with each result
   labelled by line so the interchanges (Majestic, RV Road) can be told apart
 - Fares derived from the fixed path, so every station pair has one set price
-- Explicit **Log Journey** action — checking a route does not record it, so
+- Explicit **Log Journey** action - checking a route does not record it, so
   history and spending only reflect trips actually taken
 - Ride history and spending, filterable by last week, month, 6 months, or year
 - Station status filtered by metro line (Purple, Green, Yellow)
 - Save and manage favorite routes per user account
 - Statistics page with hourly crowd charts and weekly delay trends
-- User authentication — register, login, and logout
+- User authentication - register, login, and logout
 - Responsive design that works on both desktop and mobile
 
 ---
@@ -126,10 +140,13 @@ Metro-Pulse/
 │       └── App.js
 │
 ├── screenshots/
-├── render.yaml               backend deployment blueprint
+├── render.yaml               backend deployment blueprint (Render)
+├── LICENSE
 ├── .gitignore
 └── README.md
 ```
+
+> `frontend/vercel.json` holds the frontend deployment config (Vercel).
 
 ---
 
@@ -139,7 +156,7 @@ Metro-Pulse/
 
 - [Node.js](https://nodejs.org/) v16 or above
 - npm or yarn
-- [MongoDB](https://www.mongodb.com/) — local or via [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- [MongoDB](https://www.mongodb.com/) - local or via [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
 ---
 
@@ -197,7 +214,7 @@ missing, rather than silently falling back to localhost or a guessable key.
 | `REACT_APP_API_URL` | Backend base URL including `/api` |
 
 > Write this file as UTF-8. PowerShell's `>` operator produces UTF-16, which
-> the build silently ignores — the app then falls back to the hardcoded
+> the build silently ignores - the app then falls back to the hardcoded
 > localhost URL and breaks in production. Use `Set-Content -Encoding utf8`.
 
 Neither `.env` is committed; both are covered by `.gitignore`.
@@ -274,18 +291,21 @@ curl "http://localhost:5000/api/routes/plan?from=PL01&to=YL16"
 ```
 
 **Fares.** Because the path is fixed, so is the station count, and therefore the
-fare — one set price per station pair. The slab table lives in
+fare - one set price per station pair. The slab table lives in
 [`backend/config/fares.js`](backend/config/fares.js), along with a
 `FARE_OVERRIDES` map for pairs where BMRCL's published price differs from the
 slab. **The committed slabs are not yet verified against BMRCL's official
-chart** — check <http://fare.bmrc.co.in/> and correct them before relying on
+chart** - check <http://fare.bmrc.co.in/> and correct them before relying on
 the numbers.
 
 ---
 
 ## Deployment
 
-Frontend on Vercel, backend on Render, database on MongoDB Atlas.
+Frontend on Vercel, backend on Render, database on MongoDB Atlas - this is how
+the [live demo](https://metro-pulse-nine.vercel.app) is hosted, and the steps
+below reproduce it from a fork. All three have free tiers that need no card to
+start.
 
 ### 1. MongoDB Atlas
 
@@ -295,7 +315,7 @@ Frontend on Vercel, backend on Render, database on MongoDB Atlas.
 3. **Network Access** -> add `0.0.0.0/0`. Render's free tier has no static
    outbound IP, so narrower rules will block the API. This does mean the cluster
    is reachable from any IP, so the database password is the only thing
-   protecting it — use a long generated one and never commit it.
+   protecting it - use a long generated one and never commit it.
 4. **Connect -> Drivers -> Node.js** and copy the connection string. Replace
    `<password>` with the real password and add the database name:
 
@@ -303,7 +323,7 @@ Frontend on Vercel, backend on Render, database on MongoDB Atlas.
    mongodb+srv://user:PASSWORD@cluster0.xxxxx.mongodb.net/metropulse?retryWrites=true&w=majority
    ```
 
-Point `backend/.env` at it and start the backend once — it seeds all 85
+Point `backend/.env` at it and start the backend once - it seeds all 85
 stations automatically on first connect.
 
 ### 2. Backend on Render
@@ -333,7 +353,7 @@ variable:
 |---|---|
 | `REACT_APP_API_URL` | `https://your-service.onrender.com/api` |
 
-Note the `/api` suffix — the frontend appends paths directly to this value.
+Note the `/api` suffix - the frontend appends paths directly to this value.
 
 ### 4. Connect the two
 
@@ -348,7 +368,7 @@ It accepts a comma-separated list if you want preview deployments allowed too.
 Redeploy the backend after changing it.
 
 > `REACT_APP_*` values are compiled into the JavaScript bundle at build time, so
-> anyone who loads the site can read them. Only put public values there — never
+> anyone who loads the site can read them. Only put public values there - never
 > the Atlas string or the JWT secret.
 
 ---
@@ -358,9 +378,9 @@ Redeploy the backend after changing it.
 Pull requests are welcome. If you want to work on something significant, open an issue first so we can discuss the approach.
 
 1. Fork the repo
-2. Create your branch — `git checkout -b feature/your-feature`
-3. Commit your changes — `git commit -m 'Add your feature'`
-4. Push — `git push origin feature/your-feature`
+2. Create your branch - `git checkout -b feature/your-feature`
+3. Commit your changes - `git commit -m 'Add your feature'`
+4. Push - `git push origin feature/your-feature`
 5. Open a pull request
 
 ---
